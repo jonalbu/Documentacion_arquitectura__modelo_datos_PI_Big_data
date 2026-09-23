@@ -1,0 +1,42 @@
+================================================================================
+                    REPORTE DE AUDITORIA DE INGESTA DE DATOS
+================================================================================
+Asignatura : Arquitectura Big Data
+Actividad  : EA1. Ingestion de Datos desde un API
+Fecha/Hora : 2026-09-22 20:59:18
+Origen API : https://jsonplaceholder.typicode.com/posts
+Destino BD : C:\Users\jonal\OneDrive\Documentos\9_IU Digital\7 Semestre\Arquitectura Big Data\Tarea_4\src\db\ingestion.db
+================================================================================
+
+1. RESUMEN DE CONTEO DE REGISTROS:
+--------------------------------------------------------------------------------
+- Registros extraidos desde el API       : 100
+- Registros almacenados en SQLite        : 100
+- Coincidencia de conteos                : SI
+
+2. VERIFICACION DE INTEGRIDAD DE CLAVES (IDs):
+--------------------------------------------------------------------------------
+- Total IDs unicos en API               : 100
+- Total IDs unicos en SQLite            : 100
+- IDs faltantes en BD                   : 0 []
+- IDs sobrantes en BD                   : 0 []
+- Integridad de IDs verificada           : SI
+
+3. AUDITORIA DE VALORES NULOS EN CAMPOS CLAVE:
+--------------------------------------------------------------------------------
+- Nulos en 'id'                         : 0
+- Nulos en 'userId'                     : 0
+- Nulos en 'title'                      : 0
+- Nulos en 'body'                       : 0
+- Datos completos sin nulos             : SI
+
+4. MUESTRA DE VALIDACION DE CONTENIDO:
+--------------------------------------------------------------------------------
+- Primer registro (API ID: 1):
+  * Titulo API : sunt aut facere repellat provident occaecati excep...
+  * Titulo BD  : sunt aut facere repellat provident occaecati excep...
+  * Coincidencia: SI
+
+================================================================================
+ESTADO FINAL DE LA AUDITORIA: EXITOSO (100% Integridad)
+================================================================================

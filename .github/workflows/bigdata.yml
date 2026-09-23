@@ -1,0 +1,63 @@
+name: Big Data Architecture & Pipeline Master (EA4)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-pipeline-and-docs:
+    name: Execute Full Big Data Lifecycle & Generate Architecture Docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Master Pipeline (EA1, EA2, EA3)
+        run: |
+          python src/pipeline_master.py
+
+      - name: Generate Architecture Diagrams and PDF Report (EA4)
+        run: |
+          python docs/generate_diagrams.py
+          python docs/generate_pdf_report.py
+
+      - name: Verify all artifacts exist
+        run: |
+          echo "=== Verificando existencia de entregables EA4 ==="
+          test -f docs/arquitectura_modelo.pdf || { echo "Error: Falta docs/arquitectura_modelo.pdf"; exit 1; }
+          test -f src/db/ingestion.db || { echo "Error: Falta src/db/ingestion.db"; exit 1; }
+          test -f src/xlsx/enriched_data.xlsx || { echo "Error: Falta src/xlsx/enriched_data.xlsx"; exit 1; }
+          test -f src/static/auditoria/enriched_report.txt || { echo "Error: Falta src/static/auditoria/enriched_report.txt"; exit 1; }
+          echo "Todos los entregables tecnicos fueron verificados exitosamente."
+
+      - name: Display Final Audit Log
+        run: |
+          echo "=== Contenido del Reporte de Auditoria ==="
+          cat src/static/auditoria/enriched_report.txt
+
+      - name: Upload Architecture & Data Artifacts (PDF, DB, Excel, Audits, Diagrams)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bigdata-architecture-ea4
+          path: |
+            docs/arquitectura_modelo.pdf
+            docs/*.png
+            src/db/ingestion.db
+            src/xlsx/*.xlsx
+            src/static/auditoria/*.txt
+          retention-days: 30

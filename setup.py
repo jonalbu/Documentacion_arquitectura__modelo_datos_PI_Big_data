@@ -7,6 +7,7 @@ setup(
     author="IU Digital de Antioquia - Estudiante",
     packages=find_packages(),
     install_requires=[
+        "requests>=2.31.0",
         "pandas>=2.2.0",
         "openpyxl>=3.1.2",
         "numpy>=1.26.0",

@@ -22,8 +22,7 @@ dist/
 .DS_Store
 Thumbs.db
 
-# PDF
-*.pdf
+
 
 # docs
 docs/generate_diagrams.py

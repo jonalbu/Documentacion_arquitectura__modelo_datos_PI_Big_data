@@ -1,6 +1,15 @@
 import os
+import io
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+
+def save_fig_clean(fig, output_path, dpi=300):
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    with open(output_path, "wb") as f:
+        f.write(buf.getvalue())
+
 
 def create_architecture_diagram(output_path: str):
     fig, ax = plt.subplots(figsize=(14, 8), dpi=300)
@@ -93,89 +102,172 @@ def create_architecture_diagram(output_path: str):
     ax.annotate("", xy=(8.65, 2.4), xytext=(8.65, 2.8), arrowprops=arrow_style)
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
-    plt.close()
+    save_fig_clean(fig, output_path, dpi=300)
     print(f"[OK] Diagrama de arquitectura generado en: {output_path}")
 
 
+def draw_table_card(ax, x, y, width, height, header_title, header_bg, body_bg, fields, pk_list=None, fk_list=None):
+    """Dibuja una tarjeta de tabla de base de datos con encabezado diferenciado y lista de campos sin solapamiento."""
+    header_h = 0.65
+    body_h = height - header_h
+    pk_list = pk_list or []
+    fk_list = fk_list or []
+
+    # Fondo del cuerpo de la tabla
+    rect_body = patches.Rectangle((x, y), width, body_h, facecolor=body_bg, edgecolor=header_bg, linewidth=1.5)
+    ax.add_patch(rect_body)
+
+    # Encabezado
+    rect_head = patches.Rectangle((x, y + body_h), width, header_h, facecolor=header_bg, edgecolor=header_bg, linewidth=1.5)
+    ax.add_patch(rect_head)
+
+    # Texto del encabezado
+    ax.text(x + width / 2.0, y + body_h + (header_h / 2.0), header_title,
+            ha="center", va="center", fontsize=9.5, fontweight="bold", color="white")
+
+    # Campos de la tabla (con espaciado vertical distribuido)
+    line_spacing = (body_h - 0.3) / max(len(fields), 1)
+    for idx, (col_name, col_type) in enumerate(fields):
+        field_y = (y + body_h - 0.25) - (idx * line_spacing)
+        
+        prefix = ""
+        font_wt = "normal"
+        txt_color = "#212121"
+        
+        if col_name in pk_list:
+            prefix = "[PK] "
+            font_wt = "bold"
+            txt_color = "#b71c1c"
+        elif col_name in fk_list:
+            prefix = "[FK] "
+            font_wt = "bold"
+            txt_color = "#0d47a1"
+
+        ax.text(x + 0.2, field_y, f"{prefix}{col_name}", ha="left", va="center", fontsize=8, fontweight=font_wt, color=txt_color)
+        ax.text(x + width - 0.2, field_y, col_type, ha="right", va="center", fontsize=7.5, color="#555555", style="italic")
+
+
 def create_er_diagram(output_path: str):
-    fig, ax = plt.subplots(figsize=(14, 8), dpi=300)
-    ax.set_xlim(0, 14)
-    ax.set_ylim(0, 9)
+    fig, ax = plt.subplots(figsize=(15, 9), dpi=300)
+    ax.set_xlim(0, 15)
+    ax.set_ylim(0, 9.5)
     ax.axis("off")
 
-    ax.text(7, 8.5, "MODELO DE DATOS ENTIDAD - RELACIÓN (DATA MODEL ER)", 
+    ax.text(7.5, 9.0, "MODELO DE DATOS ENTIDAD - RELACIÓN (DATA MODEL ER)", 
             ha="center", va="center", fontsize=15, fontweight="bold", color="#0d47a1")
 
-    # Central Table: ENRICHED_PLAYERS
-    rect_main = patches.FancyBboxPatch((4.5, 2.2), 5.0, 5.2, boxstyle="round,pad=0.2", 
-                                      ec="#0d47a1", fc="#e3f2fd", lw=2.2)
-    ax.add_patch(rect_main)
-    ax.text(7.0, 7.0, "TABLA PRINCIPAL: enriched_players", ha="center", va="center", 
-            fontsize=11, fontweight="bold", color="#0d47a1")
-    
-    fields_main = [
-        "PK  sofifa_id (INTEGER)",
-        "    short_name / long_name (TEXT)",
-        "    age, height_cm, weight_kg (INTEGER)",
-        "    overall, potential (INTEGER)",
-        "    value_eur, wage_eur (REAL)",
-        "FK  nationality (TEXT)",
-        "FK  club (TEXT)",
-        "    pace, shooting, passing... (REAL)",
-        "    bmi, potential_growth (REAL)",
-        "    overall_normalized (REAL)",
-        "    wage_tier, market_value_tier (TEXT)",
-        "    is_intercontinental (INTEGER)",
-        "    star_rating_index (REAL)"
+    # 1. TABLA CENTRAL: enriched_players
+    main_fields = [
+        ("sofifa_id", "INTEGER"),
+        ("short_name", "TEXT"),
+        ("long_name", "TEXT"),
+        ("age", "INTEGER"),
+        ("height_cm / weight_kg", "INTEGER"),
+        ("nationality", "TEXT"),
+        ("club", "TEXT"),
+        ("overall / potential", "INTEGER"),
+        ("value_eur / wage_eur", "REAL"),
+        ("bmi / potential_growth", "REAL"),
+        ("overall_normalized", "REAL"),
+        ("wage_tier / market_tier", "TEXT"),
+        ("is_intercontinental", "INTEGER"),
+        ("star_rating_index", "REAL")
     ]
-    for idx, f in enumerate(fields_main):
-        ax.text(4.8, 6.4 - (idx * 0.32), f, fontsize=8, color="#01579b", 
-                fontweight="bold" if "PK" in f or "FK" in f else "normal")
+    draw_table_card(
+        ax, x=4.8, y=1.2, width=5.4, height=6.8,
+        header_title="enriched_players (Tabla Maestra Gold)",
+        header_bg="#0d47a1", body_bg="#f0f7ff",
+        fields=main_fields,
+        pk_list=["sofifa_id"],
+        fk_list=["nationality", "club"]
+    )
 
-    # Peripheral Tables
-    # 1. Countries (JSON / HTML)
-    r1 = patches.FancyBboxPatch((0.5, 5.0), 3.4, 2.4, boxstyle="round,pad=0.2", ec="#2e7d32", fc="#e8f5e9", lw=1.5)
-    ax.add_patch(r1)
-    ax.text(2.2, 7.1, "countries_info (JSON/HTML)", ha="center", va="center", fontsize=9, fontweight="bold", color="#1b5e20")
-    ax.text(0.7, 6.5, "PK nationality (TEXT)\n   continent (TEXT)\n   fifa_confederation (TEXT)\n   fifa_ranking_tier (TEXT)\n   world_cup_titles (INT)\n   continental_trophies (INT)", fontsize=7.5, color="#1b5e20")
+    # 2. TABLA: countries_info (JSON / HTML)
+    countries_fields = [
+        ("nationality", "TEXT"),
+        ("continent", "TEXT"),
+        ("fifa_confederation", "TEXT"),
+        ("country_iso3", "TEXT"),
+        ("fifa_ranking_tier", "TEXT"),
+        ("world_cup_titles", "INTEGER"),
+        ("continental_trophies", "INTEGER")
+    ]
+    draw_table_card(
+        ax, x=0.5, y=5.0, width=3.7, height=3.0,
+        header_title="countries_info (JSON / HTML)",
+        header_bg="#1b5e20", body_bg="#f1f8e9",
+        fields=countries_fields,
+        pk_list=["nationality"]
+    )
 
-    # 2. Club Leagues (CSV)
-    r2 = patches.FancyBboxPatch((10.1, 5.0), 3.4, 2.4, boxstyle="round,pad=0.2", ec="#ef6c00", fc="#fff3e0", lw=1.5)
-    ax.add_patch(r2)
-    ax.text(11.8, 7.1, "club_leagues (CSV)", ha="center", va="center", fontsize=9, fontweight="bold", color="#e65100")
-    ax.text(10.3, 6.5, "PK club (TEXT)\n   league_name (TEXT)\n   league_country (TEXT)\n   league_tier (INT)\n   is_top_5_european_league (INT)", fontsize=7.5, color="#bf360c")
+    # 3. TABLA: club_leagues (CSV)
+    leagues_fields = [
+        ("club", "TEXT"),
+        ("league_name", "TEXT"),
+        ("league_country", "TEXT"),
+        ("league_tier", "INTEGER"),
+        ("is_top_5_european_league", "INTEGER")
+    ]
+    draw_table_card(
+        ax, x=10.8, y=5.2, width=3.7, height=2.8,
+        header_title="club_leagues (CSV)",
+        header_bg="#e65100", body_bg="#fff8e1",
+        fields=leagues_fields,
+        pk_list=["club"]
+    )
 
-    # 3. Stadiums (XML)
-    r3 = patches.FancyBboxPatch((10.1, 1.8), 3.4, 2.4, boxstyle="round,pad=0.2", ec="#6a1b9a", fc="#f3e5f5", lw=1.5)
-    ax.add_patch(r3)
-    ax.text(11.8, 3.9, "stadiums_info (XML)", ha="center", va="center", fontsize=9, fontweight="bold", color="#4a148c")
-    ax.text(10.3, 3.3, "PK club (TEXT)\n   stadium_name (TEXT)\n   stadium_capacity (INT)\n   main_sponsor (TEXT)\n   sponsor_tier (TEXT)", fontsize=7.5, color="#4a148c")
+    # 4. TABLA: player_contracts (TXT)
+    contracts_fields = [
+        ("sofifa_id", "INTEGER"),
+        ("contract_tier", "TEXT"),
+        ("rep_stars", "INTEGER")
+    ]
+    draw_table_card(
+        ax, x=0.5, y=1.5, width=3.7, height=2.2,
+        header_title="player_contracts (TXT)",
+        header_bg="#880e4f", body_bg="#fce4ec",
+        fields=contracts_fields,
+        pk_list=["sofifa_id"]
+    )
 
-    # 4. Contracts (TXT)
-    r4 = patches.FancyBboxPatch((0.5, 1.8), 3.4, 2.4, boxstyle="round,pad=0.2", ec="#c2185b", fc="#fce4ec", lw=1.5)
-    ax.add_patch(r4)
-    ax.text(2.2, 3.9, "player_contracts (TXT)", ha="center", va="center", fontsize=9, fontweight="bold", color="#880e4f")
-    ax.text(0.7, 3.3, "PK sofifa_id (INT)\n   contract_tier (TEXT)\n   rep_stars (INT)", fontsize=7.5, color="#880e4f")
+    # 5. TABLA: stadiums_info (XML / XLSX)
+    stadiums_fields = [
+        ("club", "TEXT"),
+        ("stadium_name", "TEXT"),
+        ("stadium_capacity", "INTEGER"),
+        ("main_sponsor", "TEXT"),
+        ("sponsor_tier", "TEXT")
+    ]
+    draw_table_card(
+        ax, x=10.8, y=1.5, width=3.7, height=2.6,
+        header_title="stadiums_sponsors (XML / XLSX)",
+        header_bg="#4a148c", body_bg="#f3e5f5",
+        fields=stadiums_fields,
+        pk_list=["club"]
+    )
 
-    # Relationship connectors
-    rel_style = dict(arrowstyle="<->", lw=1.8, color="#0d47a1")
-    ax.annotate("", xy=(3.9, 6.2), xytext=(4.5, 6.2), arrowprops=rel_style)
-    ax.text(4.2, 6.4, "1:N", fontsize=8, fontweight="bold", color="#0d47a1", ha="center")
+    # Connectors / Relationships
+    arrow_style = dict(arrowstyle="<->", lw=1.8, color="#0d47a1")
 
-    ax.annotate("", xy=(9.5, 6.2), xytext=(10.1, 6.2), arrowprops=rel_style)
-    ax.text(9.8, 6.4, "N:1", fontsize=8, fontweight="bold", color="#0d47a1", ha="center")
+    # countries_info <-> enriched_players (1:N)
+    ax.annotate("", xy=(4.2, 6.5), xytext=(4.8, 6.5), arrowprops=arrow_style)
+    ax.text(4.5, 6.75, "1 : N", fontsize=8.5, fontweight="bold", color="#0d47a1", ha="center")
 
-    ax.annotate("", xy=(9.5, 3.0), xytext=(10.1, 3.0), arrowprops=rel_style)
-    ax.text(9.8, 3.2, "N:1", fontsize=8, fontweight="bold", color="#0d47a1", ha="center")
+    # club_leagues <-> enriched_players (N:1)
+    ax.annotate("", xy=(10.2, 6.5), xytext=(10.8, 6.5), arrowprops=arrow_style)
+    ax.text(10.5, 6.75, "N : 1", fontsize=8.5, fontweight="bold", color="#0d47a1", ha="center")
 
-    ax.annotate("", xy=(3.9, 3.0), xytext=(4.5, 3.0), arrowprops=rel_style)
-    ax.text(4.2, 3.2, "1:1", fontsize=8, fontweight="bold", color="#0d47a1", ha="center")
+    # player_contracts <-> enriched_players (1:1)
+    ax.annotate("", xy=(4.2, 2.6), xytext=(4.8, 2.6), arrowprops=arrow_style)
+    ax.text(4.5, 2.85, "1 : 1", fontsize=8.5, fontweight="bold", color="#0d47a1", ha="center")
+
+    # stadiums_sponsors <-> enriched_players (N:1)
+    ax.annotate("", xy=(10.2, 2.8), xytext=(10.8, 2.8), arrowprops=arrow_style)
+    ax.text(10.5, 3.05, "N : 1", fontsize=8.5, fontweight="bold", color="#0d47a1", ha="center")
 
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
-    plt.close()
-    print(f"[OK] Diagrama ER generado en: {output_path}")
+    save_fig_clean(fig, output_path, dpi=300)
+    print(f"[OK] Diagrama ER generado exitosamente sin solapamientos en: {output_path}")
 
 
 if __name__ == "__main__":
@@ -183,3 +275,7 @@ if __name__ == "__main__":
     os.makedirs(docs_dir, exist_ok=True)
     create_architecture_diagram(os.path.join(docs_dir, "diagrama_arquitectura.png"))
     create_er_diagram(os.path.join(docs_dir, "diagrama_modelo_er.png"))
+    # Clean test file
+    test_path = os.path.join(docs_dir, "test_fig.png")
+    if os.path.exists(test_path):
+        os.remove(test_path)

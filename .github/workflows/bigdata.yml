@@ -31,15 +31,17 @@ jobs:
         run: |
           python src/pipeline_master.py
 
-      - name: Generate Architecture Diagrams and PDF Report (EA4)
+      - name: Generate Architecture Diagrams and Reports (PDF & Word DOCX)
         run: |
           python docs/generate_diagrams.py
           python docs/generate_pdf_report.py
+          python docs/generate_docx_report.py
 
       - name: Verify all artifacts exist
         run: |
           echo "=== Verificando existencia de entregables EA4 ==="
           test -f docs/arquitectura_modelo.pdf || { echo "Error: Falta docs/arquitectura_modelo.pdf"; exit 1; }
+          test -f docs/arquitectura_modelo.docx || { echo "Error: Falta docs/arquitectura_modelo.docx"; exit 1; }
           test -f src/db/ingestion.db || { echo "Error: Falta src/db/ingestion.db"; exit 1; }
           test -f src/xlsx/enriched_data.xlsx || { echo "Error: Falta src/xlsx/enriched_data.xlsx"; exit 1; }
           test -f src/static/auditoria/enriched_report.txt || { echo "Error: Falta src/static/auditoria/enriched_report.txt"; exit 1; }
@@ -50,12 +52,13 @@ jobs:
           echo "=== Contenido del Reporte de Auditoria ==="
           cat src/static/auditoria/enriched_report.txt
 
-      - name: Upload Architecture & Data Artifacts (PDF, DB, Excel, Audits, Diagrams)
+      - name: Upload Architecture & Data Artifacts (PDF, Word DOCX, DB, Excel, Audits, Diagrams)
         uses: actions/upload-artifact@v4
         with:
           name: bigdata-architecture-ea4
           path: |
             docs/arquitectura_modelo.pdf
+            docs/arquitectura_modelo.docx
             docs/*.png
             src/db/ingestion.db
             src/xlsx/*.xlsx

@@ -15,6 +15,7 @@ setup(
         "matplotlib>=3.8.0",
         "reportlab>=4.0.0",
         "Pillow>=10.0.0",
+        "python-docx>=1.1.0",
     ],
     python_requires=">=3.9",
 )
